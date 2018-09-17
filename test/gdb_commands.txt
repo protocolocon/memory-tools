@@ -1,0 +1,8 @@
+python
+import sys
+sys.path.append("src")
+sys.path.append("test")
+import uut
+uut.test(debug_uut, tests_uut)
+end
+quit
