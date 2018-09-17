@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import sys, colors as c, hp_symbols, hp_to_python, hp_memory, hp_maps
+import sys, colors as c, mt_symbols, mt_to_python, mt_memory, mt_maps
 
 # passed by through gdb_commands
 debug_uut = False
@@ -70,7 +70,7 @@ def test_get_python(t, symbols, var_name):
     syms = symbols.find_symbol(var_name)
     t.check(len(syms) == 1)
     # convert to python
-    python = hp_to_python.HPpython().get(syms[0])
+    python = mt_to_python.MTpython().get(syms[0])
     if debug_uut: print(str(python))
     return python
 
@@ -84,28 +84,28 @@ def test_class(t, python):
     t.check(python['cp'] == None)
 
 def test_local_class(t, symbols):
-    python = test_get_python(t, symbols, 'hp_lc')
+    python = test_get_python(t, symbols, 'mt_lc')
     test_class(t, python)
 
 def test_global_class(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gc')
+    python = test_get_python(t, symbols, 'mt_gc')
     test_class(t, python)
 
 def test_class_ptr(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gcp')
+    python = test_get_python(t, symbols, 'mt_gcp')
     t.check(python['cp'])
     t.check(python['charp'] == 'top')
     t.check(python['cp']['charp'] == 'bottom')
 
 def test_class_ptr_loop(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gcpl')
+    python = test_get_python(t, symbols, 'mt_gcpl')
     t.check(python['cp'])
     t.check(python['charp'] == 'class A')
     t.check(python['cp']['charp'] == 'class B')
     t.check(python['cp']['cp']['charp'] == 'class A')
 
 def test_global_vector_int(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gvi')
+    python = test_get_python(t, symbols, 'mt_gvi')
     t.check(python['.type'] == 'std::vector')
     t.check(python['.size'] == 3)
     t.check(python[0] == 1)
@@ -113,21 +113,21 @@ def test_global_vector_int(t, symbols):
     t.check(python[2] == -100)
 
 def test_global_vector_class(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gvc')
+    python = test_get_python(t, symbols, 'mt_gvc')
     t.check(python['.type'] == 'std::vector')
     t.check(python['.size'] == 2)
     t.check(python[0]['i'] == 999)
     t.check(python[1]['i'] == 1001)
 
 def test_global_unordered_map_int_int(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gumii')
+    python = test_get_python(t, symbols, 'mt_gumii')
     t.check(python['.type'] == 'std::unordered_map')
     t.check(python['.size'] == 3)
     d = { v['first']: v['second'] for k, v in python.items() if isinstance(k, int) }
     t.check(d[99] == -99)
     t.check(d[999] == -999)
     t.check(d[9999] == -9999)
-    python = test_get_python(t, symbols, 'hp_gusi')
+    python = test_get_python(t, symbols, 'mt_gusi')
     t.check(python['.type'] == 'std::unordered_set')
     d = { v for k, v in python.items() if isinstance(k, int) }
     t.check(-9 in d)
@@ -135,67 +135,67 @@ def test_global_unordered_map_int_int(t, symbols):
     t.check(-99 not in d)
 
 def test_global_list_int(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gli')
+    python = test_get_python(t, symbols, 'mt_gli')
     t.check(python['.type'] == 'std::list')
     t.check(python[0] == 49)
     t.check(python[1] == 7)
 
 def test_global_unique_ptr(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gupi')
+    python = test_get_python(t, symbols, 'mt_gupi')
     t.check(python['.type'] == 'std::unique_ptr')
     t.check(python['*'] == 66)
-    python = test_get_python(t, symbols, 'hp_gupc')
+    python = test_get_python(t, symbols, 'mt_gupc')
     t.check(python['.type'] == 'std::unique_ptr')
     t.check(python['*']['charp'] == 'hello world')
-    python = test_get_python(t, symbols, 'hp_gupc_null')
+    python = test_get_python(t, symbols, 'mt_gupc_null')
     t.check(python['.type'] == 'std::unique_ptr')
     t.check(not '*' in python.keys())
 
 def test_global_shared_ptr(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gspi')
+    python = test_get_python(t, symbols, 'mt_gspi')
     t.check(python['.type'] == 'std::shared_ptr')
     t.check(python['*'] == 66)
     t.check(python['.ref_count'] == 1)
-    python = test_get_python(t, symbols, 'hp_gspc')
+    python = test_get_python(t, symbols, 'mt_gspc')
     t.check(python['.type'] == 'std::shared_ptr')
     t.check(python['*']['charp'] == 'hello world')
     t.check(python['.ref_count'] == 1)
-    python = test_get_python(t, symbols, 'hp_gspc_null')
+    python = test_get_python(t, symbols, 'mt_gspc_null')
     t.check(python['.type'] == 'std::shared_ptr')
     t.check(not '*' in python.keys())
     t.check(python['.ref_count'] == 0)
 
 def test_global_string(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gstr')
+    python = test_get_python(t, symbols, 'mt_gstr')
     t.check(python['.type'] == 'std::string')
     t.check(python['*'] == "bye")
-    python = test_get_python(t, symbols, 'hp_gstr_long')
+    python = test_get_python(t, symbols, 'mt_gstr_long')
     t.check(python['.type'] == 'std::string')
     t.check(python['*'] == "The quick brown fox jumps over the lazy dog multiple times to do this string longer...")
 
 def test_mutex(t, symbols):
-    python = test_get_python(t, symbols, 'hp_thread_mutex')
+    python = test_get_python(t, symbols, 'mt_thread_mutex')
     t.check(python['.type'] == 'std::mutex')
     t.check(python['.locked'] == True)
     t.check(python['.owner'] >= 0)
-    python = test_get_python(t, symbols, 'hp_tc')
+    python = test_get_python(t, symbols, 'mt_tc')
     t.check(python['i'] == 33)
     t.check(python['charp'] == None)
 
 def test_function(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gfunc')
+    python = test_get_python(t, symbols, 'mt_gfunc')
     t.check(python['.type'] == 'std::function')
     t.check(python['*'] >= 0)
 
 def test_global_array(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gaus')
+    python = test_get_python(t, symbols, 'mt_gaus')
     t.check(python['.type'] == 'array')
     t.check(python['.size'] == 8)
     t.check(python[0] == 4)
     t.check(python[2] == 2)
     t.check(python[6] == 6)
     t.check(python[7] == 5)
-    python = test_get_python(t, symbols, 'hp_gaaul')
+    python = test_get_python(t, symbols, 'mt_gaaul')
     t.check(python['.type'] == 'array')
     t.check(python['.size'] == 2)
     t.check(python[0]['.type'] == 'array')
@@ -210,20 +210,20 @@ def test_global_array(t, symbols):
     t.check(python[1][2] == 777777777777)
 
 def test_global_union(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gunion')
+    python = test_get_python(t, symbols, 'mt_gunion')
     t.check(python['+i'] == 0)
     t.check(python['+charp'] == None)
 
 def test_global_enum(t, symbols):
-    python = test_get_python(t, symbols, 'hp_genum')
+    python = test_get_python(t, symbols, 'mt_genum')
     t.check(python == 100)
 
 def test_global_reference(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gcr')
+    python = test_get_python(t, symbols, 'mt_gcr')
     test_class(t, python['&ref'])
 
 def test_global_inheritance(t, symbols):
-    python = test_get_python(t, symbols, 'hp_gcd')
+    python = test_get_python(t, symbols, 'mt_gcd')
     test_class(t, python['.base']['.base'])
     t.check(python['.base']['i_deriv'] == 0)
     t.check(python['.base']['f_deriv'] == 0.0)
@@ -236,7 +236,7 @@ def test(debug, tests):
     tests_uut = tests
 
     """ this is called within gdb with UUT as inferior """
-    symbols = hp_symbols.HPsymbols()
+    symbols = mt_symbols.MTsymbols()
     # c++03 compatible tests
     with Test(symbols, test_local_class) as t: t.test()
     with Test(symbols, test_global_class) as t: t.test()
@@ -267,7 +267,7 @@ def test(debug, tests):
 
     # test
     if False:
-        symbol = symbols.find_symbol('hp_gaaul')[0][0]
+        symbol = symbols.find_symbol('mt_gaaul')[0][0]
         value0 = symbol.value()
         value1 = symbol.value()
         type0 = value0.type
@@ -281,11 +281,11 @@ def test(debug, tests):
 
     # test
     if False:
-        maps = hp_maps.HPmaps()
+        maps = mt_maps.MTmaps()
         regions = maps.get_regions(['uut', '[stack]', '[heap]'])
         maps.dump(regions)
         filtered_symbols = symbols.filter_by_providers(['uut'])
         filtered_symbols.dump()
         print("total:", len(symbols.symbols), "filtered:", len(filtered_symbols.symbols))
-        hp_memory.HPmemory().analysis(filtered_symbols)
+        mt_memory.MTmemory().analysis(filtered_symbols)
         raise

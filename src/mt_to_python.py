@@ -16,9 +16,9 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import hp_visitor
+import mt_visitor
 
-class HPpython(hp_visitor.HPvisitor):
+class MTpython(mt_visitor.MTvisitor):
     def __init__(self):
         super().__init__()
         self.seen = { }  # { (addr, typename): python }

@@ -16,16 +16,16 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import hp_visitor
+import mt_visitor
 
-class HPmemory(hp_visitor.HPvisitor):
+class MTmemory(mt_visitor.MTvisitor):
     def __init__(self):
         super().__init__()
         self.seen = { }    # { (addr, size): name }
         self.graph = set() # { (addr_from, addr_to) }
 
     def analysis(self, symbols):
-        """ memory analysis; symbols is a HPsymbols object """
+        """ memory analysis; symbols is a MTsymbols object """
         for addr, (symbol, value) in symbols.symbols.items():
             # start recursion for this value
             self.stack = [] # [ (name, address) ]

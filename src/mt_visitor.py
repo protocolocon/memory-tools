@@ -17,7 +17,7 @@
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
 import gdb
-from hp_containers import (Array, StdVector, StdUnorderedMap, StdUniquePtr, StdSharedPtr, StdString, StdMutex,
+from mt_containers import (Array, StdVector, StdUnorderedMap, StdUniquePtr, StdSharedPtr, StdString, StdMutex,
                            StdList, StdFunction, FrameLFHashMap, FrameLFVector, FrameLFChunk, FrameHashMapCloseAddressing)
 
 codeToName = {
@@ -50,7 +50,7 @@ codeToName = {
 }
 
 
-class HPvisitor:
+class MTvisitor:
     def __init__(self, n_elems_containters = 1 << 32):
         self.n_elems_containers = n_elems_containters
         self.char_type = gdb.lookup_type('char')

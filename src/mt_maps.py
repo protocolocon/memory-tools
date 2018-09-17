@@ -18,7 +18,7 @@
 
 import gdb, os
 
-class HPmaps:
+class MTmaps:
     """ reads and parses /proc/$pid/maps file """
     def __init__(self):
         inferior = gdb.selected_inferior()

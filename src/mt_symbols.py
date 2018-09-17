@@ -17,9 +17,9 @@
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
 import gdb, os
-from hp_type_cleaning import clean_type
+from mt_type_cleaning import clean_type
 
-class HPsymbols:
+class MTsymbols:
     """
     Find all symbols accessible from the blocks of all frames of all threads.
     """
@@ -36,8 +36,8 @@ class HPsymbols:
             print("%16x %10d %-40s %s" % (int(value.address), value.type.sizeof, symbol.name, clean_type(value.type)))
 
     def filter_by_regions(self, regions):
-        """ regions as in HPmaps regions """
-        symbols = HPsymbols(True)
+        """ regions as in MTmaps regions """
+        symbols = MTsymbols(True)
         filtered = symbols.symbols
         for address, symbol in self.symbols.items():
             for region in regions:
@@ -48,7 +48,7 @@ class HPsymbols:
 
     def filter_by_providers(self, providers):
         """ providers are just binary or libraries base names """
-        symbols = HPsymbols(True)
+        symbols = MTsymbols(True)
         filtered = symbols.symbols
         for address, (symbol, value) in self.symbols.items():
             provider = symbol.symtab.objfile.owner and symbol.symtab.objfile.owner.filename or symbol.symtab.objfile.filename
