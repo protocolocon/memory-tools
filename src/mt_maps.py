@@ -16,13 +16,13 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, os
+import gdb, os, mt_colors as c
 
 class MTmaps:
     """ reads and parses /proc/$pid/maps file """
     def __init__(self):
         inferior = gdb.selected_inferior()
-        self.regions = []
+        self.regions = [] # [ [low, high, description] ]
         with open('/proc/%d/maps' % inferior.pid) as f:
             while not f.closed:
                 line = f.readline()
@@ -32,6 +32,7 @@ class MTmaps:
                 # mmap (inode != 0)
                 descr = (int(line[4]) or len(line) > 5) and line[5] or ''
                 self.regions.append([low, high, descr])
+        self.regions.sort()
 
         # find all stacks
         for thread in inferior.threads():
@@ -44,9 +45,12 @@ class MTmaps:
             region[2] = '[stack]'
 
     def dump(self, regions = None):
+        print(c.WHITE + 'regions' + c.RESET)
         regions = regions or self.regions
         for region in regions:
-            print('%16x %16x %10d %s' % (region[0], region[1], region[1] - region[0], region[2]))
+            print((c.GREEN + '%16x %16x ' + c.YELLOW + '%10d ' + c.RESET + '%s') %
+                  (region[0], region[1], region[1] - region[0], region[2]))
+        print()
 
 
     def get_region(self, address):

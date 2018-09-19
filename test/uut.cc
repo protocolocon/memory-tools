@@ -112,6 +112,7 @@ list<int> mt_gli;
 // global string
 const string mt_gstr("bye");
 string mt_gstr_long("The quick brown fox jumps over the lazy dog multiple times to do this string longer...");
+string mt_gstr_empty;
 
 // array
 unsigned short mt_gaus[8] = { 4, 3, 2, 1, 8, 7, 6, 5 };
@@ -132,6 +133,11 @@ MTclass_ref mt_gcr(mt_gc);
 
 // inheritance
 MTclass_deriv2 mt_gcd;
+
+// void
+void* mt_vp(NULL);
+void** mt_vpp(&mt_vp);
+void*** mt_vppp(&mt_vpp);
 
 // c++11
 #ifdef CPP11

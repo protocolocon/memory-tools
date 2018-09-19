@@ -28,6 +28,7 @@ def find_binaries(regex):
     binaries = set()
     bin_list = []
     for path in os.environ["PATH"].split(os.pathsep):
+        if not os.path.exists(path): continue
         for f in os.listdir(path):
             fabs = os.path.join(path, f)
             if re.match(regex, f) and os.access(fabs, os.X_OK):

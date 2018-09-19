@@ -17,8 +17,10 @@
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
 import gdb
-from mt_containers import (Array, StdVector, StdUnorderedMap, StdUniquePtr, StdSharedPtr, StdString, StdMutex,
-                           StdList, StdFunction, FrameLFHashMap, FrameLFVector, FrameLFChunk, FrameHashMapCloseAddressing)
+from mt_containers import (MTarray, MTstd_vector, MTstd_unordered_map, MTstd_unordered_set,
+                           MTstd_unique_ptr, MTstd_shared_ptr, MTstd_string, MTstd_mutex,
+                           MTstd_list, MTstd_function, MTframe_lf_hashmap, MTframe_lf_vector,
+                           MTframe_lf_chunk, MTframe_hashmap_close_addressing)
 
 codeToName = {
     gdb.TYPE_CODE_PTR:               'ptr',               #  1
@@ -83,76 +85,56 @@ class MTvisitor:
 
         visitors.get(value.type.code, unhandled)(value, name)
 
-    def _struct_visit(self, value, name):
-        # check for specific containers
-        typename = value.type.name or ''
+    def get_struct_wrapper(self, value):
+        """ provided a value, return the wrapping object around the structure or None"""
+        if value.type.code == gdb.TYPE_CODE_ARRAY: return MTarray(value)
+        if value.type.code != gdb.TYPE_CODE_STRUCT or not value.type.name: return None
+        typename = value.type.name
+        # C++ standard library
         if typename.startswith('std::'):
-            if typename.startswith('std::vector<'):
-                vector = StdVector(value)
-                return self._common_generator(vector, 'std::vector')
-            elif typename.startswith('std::unordered_map<'):
-                um = StdUnorderedMap(value)
-                return self._common_generator(um, 'std::unordered_map')
-            elif typename.startswith('std::unordered_set<'):
-                us = StdUnorderedMap(value)
-                return self._common_generator(us, 'std::unordered_set')
-            elif typename.startswith('std::unique_ptr<'):
-                up = StdUniquePtr(value)
-                self.visit_string(gdb.Value('std::unique_ptr'), '.type')
-                if up.valid(): self.visit(up.get_elem(), '*')
-                return
-            elif typename.startswith('std::shared_ptr<'):
-                sp = StdSharedPtr(value)
-                self.visit_string(gdb.Value('std::shared_ptr'), '.type')
-                self.visit(gdb.Value(sp.ref_count()), '.ref_count')
-                if sp.valid():
-                    self.visit(sp.get_elem(), '*')
-                return
+            if typename.startswith('std::vector<'): return MTstd_vector(value)
+            elif typename.startswith('std::unordered_map<'): return MTstd_unordered_map(value)
+            elif typename.startswith('std::unordered_set<'): return MTstd_unordered_set(value)
+            elif typename.startswith('std::unique_ptr<'): return MTstd_unique_ptr(value)
+            elif typename.startswith('std::shared_ptr<'): return MTstd_shared_ptr(value)
             elif typename.startswith('std::__cxx11::basic_string<') or typename.startswith('std::basic_string<'):
-                string = StdString(value)
-                self.visit_string(gdb.Value('std::string'), '.type')
-                self.visit_string(gdb.Value(string.get()), '*')
-                return
-            elif typename == 'std::mutex' or typename == 'std::recursive_mutex':
-                thread = StdMutex(value)
-                locked = thread.locked()
-                self.visit_string(gdb.Value('std::mutex'), '.type')
-                self.visit(gdb.Value(locked), '.locked')
-                if locked:
-                    self.visit(gdb.Value(thread.owner()), '.owner')
-                return
+                return MTstd_string(value)
+            elif typename == 'std::mutex' or typename == 'std::recursive_mutex': return MTstd_mutex(value)
             elif typename.startswith('std::__cxx11::list<') or typename.startswith('std::list<'):
-                lst = StdList(value)
-                return self._common_generator(lst, 'std::list')
-            elif typename.startswith('std::function<'):
-                func = StdFunction(value)
-                self.visit_string(gdb.Value('std::function'), '.type')
-                if not func.empty():
-                    self.visit(gdb.Value(func.address()), '*')
-                return
+                return MTstd_list(value)
+            elif typename.startswith('std::function<'): return MTstd_function(value)
 
+        # boost
         elif typename.startswith('boost::'):
             if typename.startswith('boost::multi_index::multi_index_container<'):
                 return # TODO
 
+        # lock free
         elif typename.startswith('frame::'):
-            if typename.startswith('frame::lf::HashMap<') and typename[-1] == '>':
-                hm = FrameLFHashMap(value)
-                return self._common_generator(hm, 'frame::lf::HashMap')
+            if typename.startswith('frame::lf::HashMap<') and typename[-1] == '>': return MTframe_lf_hashmap(value)
             elif typename.startswith('frame::HashMapCloseAddressing<') and typename[-1] == '>':
-                hm = FrameHashMapCloseAddressing(value)
-                return self._common_generator(hm, 'frame::HashMapCloseAddressing')
-            elif typename.startswith('frame::lf::Vector<'):
-                vector = FrameLFVector(value)
-                return self._common_generator(vector, 'frame::lf::Vector')
-            elif typename == 'frame::lf::Chunk':
-                chunk = FrameLFChunk(value)
-                self.visit_string(gdb.Value('frame::lf::Chunk'), '.type')
-                self.visit(gdb.Value(chunk.size()), '.size')
-                self.visit(gdb.Value(chunk.capacity()), '.capacity')
-                self.visit(gdb.Value(chunk.collected()), '.collected')
-                return
+                return MTframe_hashmap_close_addressing(value)
+            elif typename.startswith('frame::lf::Vector<'): return MTframe_lf_vector(value)
+            elif typename == 'frame::lf::Chunk': return MTframe_lf_chunk
 
+    def is_string_const_char(self, value):
+        if value.type.code != gdb.TYPE_CODE_PTR: return False
+        base_type = value.type.target()
+        return base_type.name == 'char' and base_type == base_type.const()
+
+    def is_string_char_array(self, value):
+        if value.type.code != gdb.TYPE_CODE_ARRAY: return False
+        return value.type.target().name == 'char'
+
+    def is_string(self, value):
+        return self.is_string_const_char() or self.is_string_char_array()
+
+    def _struct_visit(self, value, name):
+        # well known class / struct
+        wrap = self.get_struct_wrapper(value)
+        if wrap: return self._manage_wrap(wrap, name)
+
+        # unknown class / struct
         for field_name, field in value.type.items():
             if field.artificial: continue
             #print('Field:', name + '::' + field_name, field.type.code, field.type.name, field.is_base_class)
@@ -163,7 +145,15 @@ class MTvisitor:
                     self.visit(base, '.base')
             elif hasattr(field, 'bitpos'):
                 # composition
-                self.visit(value[field_name], field_name or '<anonymous>')
+                # there is a problem with references in which correct addresses are not correctly provided by gdb
+                # convert references to pointers inferring address (cast would also take bad address)
+                new_value = value[field_name]
+                if new_value.type.code == gdb.TYPE_CODE_REF:
+                    assert not (int(field.bitpos) & 3) # reference in a bitfield?
+                    address = int(value.address) + (field.bitpos >> 3)
+                    # if Value = T&, convert to Value = *((T**)address)
+                    new_value = gdb.Value(address).cast(new_value.type.target().pointer().pointer()).dereference()
+                self.visit(new_value, field_name or '<anonymous>')
             else:
                 # static member
                 pass #print('missing static member')
@@ -174,28 +164,27 @@ class MTvisitor:
             self.visit(value[field_name], '+' + (field_name or '<anonymous>'))
 
     def _array_visit(self, value, name):
-        array = Array(value)
+        array = MTarray(value)
         # special case, array of char -> string
         if array.type_elem.name == 'char':
             self.visit_string(value, name)
             return
-        return self._common_generator(array, 'array')
+        return self._manage_wrap(array, name)
 
     def _ptr_visit(self, value, name):
-        base_type = value.type.target()
         # special case 'const char *'
+        base_type = value.type.target()
         if base_type.name == 'char' and base_type == base_type.const():
             self.visit_string(value, name)
             return
 
-        value = value.dereference()
         try:
+            value = value.dereference()     # could fail if generic pointer
             str(value.cast(self.char_type)) # test that values is in accessible memory
         except:
             #self.visit(value.cast(self.long_type), name) # visit with the pointer value
             return
-        name = '*' + name
-        self.visit(value, name)
+        self.visit(value, '*' + name)
 
     def _ref_visit(self, value, name):
         self.visit(value.referenced_value(), '&' + name)
@@ -209,14 +198,18 @@ class MTvisitor:
     def _methodptr_visit(self, value, name):
         self.visit(value.cast(self.long_type), name)
 
-    def _common_generator(self, gen, typename):
-        self.visit_string(gdb.Value(typename), '.type')
-        if hasattr(gen, 'error'):    return self.visit(gdb.Value(True),    '.python_error')
-        if hasattr(gen, 'size'):     self.visit(gdb.Value(gen.size()),     '.size')
-        if hasattr(gen, 'capacity'): self.visit(gdb.Value(gen.capacity()), '.capacity')
-        if hasattr(gen, 'buckets'):  self.visit(gdb.Value(gen.buckets()),  '.buckets')
+    def _manage_wrap(self, wrap, name):
+        # add properties
+        for prop in [prop for prop in dir(wrap) if prop.startswith('prop_')]:
+            prop_value = getattr(wrap, prop)
+            if isinstance(prop_value, str):
+                self.visit_string(gdb.Value(prop_value), '.' + prop[5:])
+            else:
+                self.visit(gdb.Value(prop_value), '.' + prop[5:])
+
+        # items
         count = 0
-        for elem in gen:
-            self.visit(elem, '[%d]' % count)
+        for item in wrap:
+            self.visit(item, ('[%d]' + name) % count)
             count += 1
             if count == self.n_elems_containers: break

@@ -41,13 +41,17 @@ class MTpython(mt_visitor.MTvisitor):
         self.stack = []
         self.generic_visit(value, name)
         for k, v in self.stack:
-            if k[0] == '[' and k[-1] == ']': k = int(k[1:-1])
+            if k[0] == '[': k = int(k[1 : k.find(']')])
             struct[k] = v
         self.stack = stack
         self.stack.append((name, struct))
 
     def visit_array(self, value, name):
-        self.visit_struct(value, name)
+        if self.is_string_char_array(value):
+            # do not create another dict for the string
+            return self.visit_string(value, name)
+        else:
+            self.visit_struct(value, name)
 
     def visit_union(self, value, name):
         self.visit_struct(value, name)

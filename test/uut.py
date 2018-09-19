@@ -143,35 +143,38 @@ def test_global_list_int(t, symbols):
 def test_global_unique_ptr(t, symbols):
     python = test_get_python(t, symbols, 'mt_gupi')
     t.check(python['.type'] == 'std::unique_ptr')
-    t.check(python['*'] == 66)
+    t.check(python[0] == 66)
     python = test_get_python(t, symbols, 'mt_gupc')
     t.check(python['.type'] == 'std::unique_ptr')
-    t.check(python['*']['charp'] == 'hello world')
+    t.check(python[0]['charp'] == 'hello world')
     python = test_get_python(t, symbols, 'mt_gupc_null')
     t.check(python['.type'] == 'std::unique_ptr')
-    t.check(not '*' in python.keys())
+    t.check(not 0 in python.keys())
 
 def test_global_shared_ptr(t, symbols):
     python = test_get_python(t, symbols, 'mt_gspi')
     t.check(python['.type'] == 'std::shared_ptr')
-    t.check(python['*'] == 66)
+    t.check(python[0] == 66)
     t.check(python['.ref_count'] == 1)
     python = test_get_python(t, symbols, 'mt_gspc')
     t.check(python['.type'] == 'std::shared_ptr')
-    t.check(python['*']['charp'] == 'hello world')
+    t.check(python[0]['charp'] == 'hello world')
     t.check(python['.ref_count'] == 1)
     python = test_get_python(t, symbols, 'mt_gspc_null')
     t.check(python['.type'] == 'std::shared_ptr')
-    t.check(not '*' in python.keys())
+    t.check(not 0 in python.keys())
     t.check(python['.ref_count'] == 0)
 
 def test_global_string(t, symbols):
     python = test_get_python(t, symbols, 'mt_gstr')
     t.check(python['.type'] == 'std::string')
-    t.check(python['*'] == "bye")
+    t.check(python[0] == "bye")
     python = test_get_python(t, symbols, 'mt_gstr_long')
     t.check(python['.type'] == 'std::string')
-    t.check(python['*'] == "The quick brown fox jumps over the lazy dog multiple times to do this string longer...")
+    t.check(python[0] == 'The quick brown fox jumps over the lazy dog multiple times to do this string longer...')
+    python = test_get_python(t, symbols, 'mt_gstr_empty')
+    t.check(python['.type'] == 'std::string')
+    t.check(python[0] == '')
 
 def test_mutex(t, symbols):
     python = test_get_python(t, symbols, 'mt_thread_mutex')
@@ -185,7 +188,8 @@ def test_mutex(t, symbols):
 def test_function(t, symbols):
     python = test_get_python(t, symbols, 'mt_gfunc')
     t.check(python['.type'] == 'std::function')
-    t.check(python['*'] >= 0)
+    t.check(python['.empty'] == False)
+    t.check(python[0] >= 0)
 
 def test_global_array(t, symbols):
     python = test_get_python(t, symbols, 'mt_gaus')
@@ -220,13 +224,21 @@ def test_global_enum(t, symbols):
 
 def test_global_reference(t, symbols):
     python = test_get_python(t, symbols, 'mt_gcr')
-    test_class(t, python['&ref'])
+    test_class(t, python['ref'])
 
 def test_global_inheritance(t, symbols):
     python = test_get_python(t, symbols, 'mt_gcd')
     test_class(t, python['.base']['.base'])
     t.check(python['.base']['i_deriv'] == 0)
     t.check(python['.base']['f_deriv'] == 0.0)
+
+def test_global_void_ptr(t, symbols):
+    python = test_get_python(t, symbols, 'mt_vp')
+    t.check(python == None)
+    python = test_get_python(t, symbols, 'mt_vpp')
+    t.check(python == None)
+    python = test_get_python(t, symbols, 'mt_vppp')
+    t.check(python == None)
 
 
 def test(debug, tests):
@@ -251,6 +263,7 @@ def test(debug, tests):
     with Test(symbols, test_global_enum) as t: t.test()
     with Test(symbols, test_global_reference) as t: t.test()
     with Test(symbols, test_global_inheritance) as t: t.test()
+    with Test(symbols, test_global_void_ptr) as t: t.test()
 
     # c++11 compatible tests
     have_cpp11 = False
@@ -267,25 +280,13 @@ def test(debug, tests):
 
     # test
     if False:
-        symbol = symbols.find_symbol('mt_gaaul')[0][0]
-        value0 = symbol.value()
-        value1 = symbol.value()
-        type0 = value0.type
-        type1 = value1.type
-        print(symbol, value0)
-        print(value0 == value1, value0 is value1)
-        print(type0 == type1, type0 is type1)
-        print(dir(type0))
-        print(type0.__str__(), type1.__str__())
-        raise
-
-    # test
-    if False:
         maps = mt_maps.MTmaps()
         regions = maps.get_regions(['uut', '[stack]', '[heap]'])
         maps.dump(regions)
         filtered_symbols = symbols.filter_by_providers(['uut'])
         filtered_symbols.dump()
         print("total:", len(symbols.symbols), "filtered:", len(filtered_symbols.symbols))
-        mt_memory.MTmemory().analysis(filtered_symbols)
+        memory = mt_memory.MTmemory()
+        memory.analysis(filtered_symbols)
+        memory.dump()
         raise

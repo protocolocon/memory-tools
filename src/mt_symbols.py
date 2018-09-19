@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, os
+import gdb, os, mt_colors as c
 from mt_type_cleaning import clean_type
 
 class MTsymbols:
@@ -29,11 +29,14 @@ class MTsymbols:
         if not empty: self._inferior()
 
     def dump(self):
+        print(c.WHITE + 'symbols' + c.RESET)
         addrs = list(self.symbols.keys())
         addrs.sort()
         for addr in addrs:
             symbol, value = self.symbols[addr]
-            print("%16x %10d %-40s %s" % (int(value.address), value.type.sizeof, symbol.name, clean_type(value.type)))
+            print((c.GREEN + '%16x ' + c.YELLOW + '%10d ' + c.RESET + '%-40s %s') %
+                  (int(value.address), value.type.sizeof, symbol.name, clean_type(value.type)))
+        print()
 
     def filter_by_regions(self, regions):
         """ regions as in MTmaps regions """
