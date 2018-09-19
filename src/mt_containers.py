@@ -91,7 +91,15 @@ class MTstd_vector:
 class MTstd_unordered_map:
     def __init__(self, value):
         self.value = value
-        self.node = self.value['_M_h']['_M_before_begin']['_M_nxt']
+        try:
+            self.node = self.value['_M_h']['_M_before_begin']['_M_nxt']
+        except:
+            try:
+                self.value['_M_h']['_M_bbegin']
+            except:
+                raise RuntimeError('unknown std::unordered_map implementation')
+            else:
+                raise RuntimeError('std::unordered map prior to libstdc++ 4.9')
         self.node_type = find_type(self.value['_M_h'].type, '__node_type').pointer()
 
     @property
