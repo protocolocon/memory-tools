@@ -22,7 +22,10 @@
 # define CPP11
 #endif
 
+#include <map>
+#include <set>
 #include <list>
+#include <deque>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -139,6 +142,13 @@ void* mt_vp(NULL);
 void** mt_vpp(&mt_vp);
 void*** mt_vppp(&mt_vpp);
 
+// deque
+deque<int> mt_gdequei;
+
+// map/set ints
+map<int, int> mt_gmii;
+set<int> mt_gsi;
+
 // c++11
 #ifdef CPP11
 
@@ -223,6 +233,18 @@ int main(int argc, char** argv) {
 
     // inheritance
     mt_gcd.donotoptim();
+
+    // deque
+    mt_gdequei.push_back(33);
+    mt_gdequei.push_front(32);
+    mt_gdequei.push_back(44);
+    mt_gdequei.push_front(-44);
+
+    // map/set ints
+    for (int k = 7; k < 13; k++) {
+        mt_gmii[k] = k * 2;
+        mt_gsi.insert(k);
+    }
 
 #ifdef CPP11
     have_cpp11 = true;

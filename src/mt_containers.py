@@ -16,12 +16,19 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
+# Some of these class inspectors are based on libstdc++6 pretty printers:
+#   /usr/share/gcc-8/python/libstdcxx/v6/printers.py
+
 import gdb
 
 def find_type(orig, name):
     type = orig.strip_typedefs()
     search = '%s::%s' % (type.unqualified(), name)
     return gdb.lookup_type(search)
+
+def get_value_from_aligned_membuf(buf, valtype):
+    """ Returns the value held in a __gnu_cxx::__aligned_membuf. """
+    return buf['_M_storage'].address.cast(valtype.pointer()).dereference()
 
 
 class MTarray:
@@ -159,6 +166,127 @@ class MTstd_list:
             return node['_M_storage'].address.cast(self.type).dereference()
         except: # c++11
             return (node_ptr + 1).cast(self.type).dereference()
+
+
+class MTstd_deque:
+    def __init__(self, value):
+        self.value = value
+        item_type = value.type.template_argument(0)
+        size = item_type.sizeof
+        if size < 512:
+            self.buffer_size = int (512 / size)
+        else:
+            self.buffer_size = 1
+
+    @property
+    def prop_type(self):
+        return "std::deque"
+
+    @property
+    def prop_size(self):
+        start = self.value['_M_impl']['_M_start']
+        end = self.value['_M_impl']['_M_finish']
+        delta_n = end['_M_node'] - start['_M_node'] - 1
+        delta_s = start['_M_last'] - start['_M_cur']
+        delta_e = end['_M_cur'] - end['_M_first']
+        return self.buffer_size * delta_n + delta_s + delta_e
+
+    @property
+    def prop_buckets(self):
+        start = self.value['_M_impl']['_M_start']
+        end = self.value['_M_impl']['_M_finish']
+        return end['_M_node'] - start['_M_node'] + 1
+
+    def __iter__(self):
+        start = self.value['_M_impl']['_M_start']
+        end = self.value['_M_impl']['_M_finish']
+        self.node = start['_M_node']
+        self.start = start['_M_cur']
+        self.end = start['_M_last']
+        self.last = end['_M_cur']
+        return self
+
+    def __next__(self):
+        if self.start == self.last:
+            raise StopIteration
+
+        result = self.start.dereference()
+
+        # advance the 'cur' pointer
+        self.start = self.start + 1
+        if self.start == self.end:
+            # if we got to the end of this bucket, move to the next bucket
+            self.node = self.node + 1
+            self.start = self.node[0]
+            self.end = self.start + self.buffer_size
+
+        return result
+
+
+class MTstd_map:
+    def __init__(self, value):
+        self.value = value
+        self.size = value['_M_t']['_M_impl']['_M_node_count']
+
+    @property
+    def prop_type(self):
+        return "std::map"
+
+    @property
+    def prop_size(self):
+        return self.size
+
+    def __iter__(self):
+        self.count = 0
+        self.node = self.value['_M_t']['_M_impl']['_M_header']['_M_left']
+        rep_type = find_type(self.value.type, '_Rep_type')
+        node = find_type(rep_type, '_Link_type')
+        self.type = node.strip_typedefs()
+        print("------", str(self.type))
+        return self
+
+    def _get_value_from_Rb_tree_node(self, node):
+        """ returns the value held in an _Rb_tree_node<_Val> """
+        try:
+            member = node.type.fields()[1].name
+            if member == '_M_value_field':
+                # C++03 implementation, node contains the value as a member
+                return node['_M_value_field']
+            elif member == '_M_storage':
+                # C++11 implementation, node stores value in __aligned_membuf
+                valtype = node.type.template_argument(0)
+                return get_value_from_aligned_membuf(node['_M_storage'], valtype)
+        except:
+            pass
+        raise ValueError("Unsupported implementation for %s" % str(node.type))
+
+    def __next__(self):
+        if self.count == self.size:
+            raise StopIteration
+        result = self.node
+        self.count = self.count + 1
+        if self.count < self.size:
+            # compute the next node
+            node = self.node
+            if node.dereference()['_M_right']:
+                node = node.dereference()['_M_right']
+                while node.dereference()['_M_left']:
+                    node = node.dereference()['_M_left']
+            else:
+                parent = node.dereference()['_M_parent']
+                while node == parent.dereference()['_M_right']:
+                    node = parent
+                    parent = parent.dereference()['_M_parent']
+                if node.dereference()['_M_right'] != parent:
+                    node = parent
+            self.node = node
+        return self._get_value_from_Rb_tree_node(result.cast(self.type).dereference())
+
+
+class MTstd_set(MTstd_map):
+    @property
+    def prop_type(self):
+        return "std::set"
 
 
 class MTstd_unique_ptr:

@@ -104,22 +104,20 @@ def test_class_ptr_loop(t, symbols):
     t.check(python['cp']['charp'] == 'class B')
     t.check(python['cp']['cp']['charp'] == 'class A')
 
-def test_global_vector_int(t, symbols):
+def test_global_vector(t, symbols):
     python = test_get_python(t, symbols, 'mt_gvi')
     t.check(python['.type'] == 'std::vector')
     t.check(python['.size'] == 3)
     t.check(python[0] == 1)
     t.check(python[1] == 7)
     t.check(python[2] == -100)
-
-def test_global_vector_class(t, symbols):
     python = test_get_python(t, symbols, 'mt_gvc')
     t.check(python['.type'] == 'std::vector')
     t.check(python['.size'] == 2)
     t.check(python[0]['i'] == 999)
     t.check(python[1]['i'] == 1001)
 
-def test_global_unordered_map_int_int(t, symbols):
+def test_global_unordered_map(t, symbols):
     python = test_get_python(t, symbols, 'mt_gumii')
     t.check(python['.type'] == 'std::unordered_map')
     t.check(python['.size'] == 3)
@@ -240,6 +238,35 @@ def test_global_void_ptr(t, symbols):
     python = test_get_python(t, symbols, 'mt_vppp')
     t.check(python == None)
 
+def test_global_deque(t, symbols):
+    python = test_get_python(t, symbols, 'mt_gdequei')
+    t.check(python['.type'] == 'std::deque')
+    t.check(python['.size'] == 4)
+    t.check(python['.buckets'] == 2)
+    t.check(python[0] == -44)
+    t.check(python[1] == 32)
+    t.check(python[2] == 33)
+    t.check(python[3] == 44)
+
+def test_global_map(t, symbols):
+    python = test_get_python(t, symbols, 'mt_gmii')
+    t.check(python['.type'] == 'std::map')
+    t.check(python['.size'] == 6)
+    t.check(python[0] == {'first': 7, 'second': 14 })
+    t.check(python[1] == {'first': 8, 'second': 16 })
+    t.check(python[2] == {'first': 9, 'second': 18 })
+    t.check(python[3] == {'first': 10, 'second': 20 })
+    t.check(python[4] == {'first': 11, 'second': 22 })
+    t.check(python[5] == {'first': 12, 'second': 24 })
+    python = test_get_python(t, symbols, 'mt_gsi')
+    t.check(python['.type'] == 'std::set')
+    t.check(python['.size'] == 6)
+    t.check(python[0] == 7)
+    t.check(python[1] == 8)
+    t.check(python[2] == 9)
+    t.check(python[3] == 10)
+    t.check(python[4] == 11)
+    t.check(python[5] == 12)
 
 def test(debug, tests):
     global debug_uut
@@ -254,8 +281,7 @@ def test(debug, tests):
     with Test(symbols, test_global_class) as t: t.test()
     with Test(symbols, test_class_ptr) as t: t.test()
     with Test(symbols, test_class_ptr_loop) as t: t.test()
-    with Test(symbols, test_global_vector_int) as t: t.test()
-    with Test(symbols, test_global_vector_class) as t: t.test()
+    with Test(symbols, test_global_vector) as t: t.test()
     with Test(symbols, test_global_list_int) as t: t.test()
     with Test(symbols, test_global_string) as t: t.test()
     with Test(symbols, test_global_array) as t: t.test()
@@ -264,6 +290,8 @@ def test(debug, tests):
     with Test(symbols, test_global_reference) as t: t.test()
     with Test(symbols, test_global_inheritance) as t: t.test()
     with Test(symbols, test_global_void_ptr) as t: t.test()
+    with Test(symbols, test_global_deque) as t: t.test()
+    with Test(symbols, test_global_map) as t: t.test()
 
     # c++11 compatible tests
     have_cpp11 = False
@@ -272,7 +300,7 @@ def test(debug, tests):
             have_cpp11 = True
 
     if have_cpp11:
-        with Test(symbols, test_global_unordered_map_int_int) as t: t.test()
+        with Test(symbols, test_global_unordered_map) as t: t.test()
         with Test(symbols, test_global_unique_ptr) as t: t.test()
         with Test(symbols, test_global_shared_ptr) as t: t.test()
         with Test(symbols, test_mutex) as t: t.test()

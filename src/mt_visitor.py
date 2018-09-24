@@ -19,8 +19,9 @@
 import gdb
 from mt_containers import (MTarray, MTstd_vector, MTstd_unordered_map, MTstd_unordered_set,
                            MTstd_unique_ptr, MTstd_shared_ptr, MTstd_string, MTstd_mutex,
-                           MTstd_list, MTstd_function, MTframe_lf_hashmap, MTframe_lf_vector,
-                           MTframe_lf_chunk, MTframe_hashmap_close_addressing)
+                           MTstd_list, MTstd_function, MTstd_deque, MTstd_map, MTstd_set,
+                           MTframe_lf_hashmap, MTframe_lf_vector, MTframe_lf_chunk,
+                           MTframe_hashmap_close_addressing)
 
 codeToName = {
     gdb.TYPE_CODE_PTR:               'ptr',               #  1
@@ -103,6 +104,9 @@ class MTvisitor:
             elif typename.startswith('std::__cxx11::list<') or typename.startswith('std::list<'):
                 return MTstd_list(value)
             elif typename.startswith('std::function<'): return MTstd_function(value)
+            elif typename.startswith('std::deque<'): return MTstd_deque(value)
+            elif typename.startswith('std::map<'): return MTstd_map(value)
+            elif typename.startswith('std::set<'): return MTstd_set(value)
 
         # boost
         elif typename.startswith('boost::'):
