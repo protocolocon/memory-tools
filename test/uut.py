@@ -88,16 +88,15 @@ def test_local_class(t, symbols):
     test_class(t, python)
 
 def test_global_class(t, symbols):
+    # one class
     python = test_get_python(t, symbols, 'mt_gc')
     test_class(t, python)
-
-def test_class_ptr(t, symbols):
+    # class ptr
     python = test_get_python(t, symbols, 'mt_gcp')
     t.check(python['cp'])
     t.check(python['charp'] == 'top')
     t.check(python['cp']['charp'] == 'bottom')
-
-def test_class_ptr_loop(t, symbols):
+    # class ptr loop
     python = test_get_python(t, symbols, 'mt_gcpl')
     t.check(python['cp'])
     t.check(python['charp'] == 'class A')
@@ -132,7 +131,7 @@ def test_global_unordered_map(t, symbols):
     t.check(-91 in d)
     t.check(-99 not in d)
 
-def test_global_list_int(t, symbols):
+def test_global_list(t, symbols):
     python = test_get_python(t, symbols, 'mt_gli')
     t.check(python['.type'] == 'std::list')
     t.check(python[0] == 49)
@@ -268,6 +267,14 @@ def test_global_map(t, symbols):
     t.check(python[4] == 11)
     t.check(python[5] == 12)
 
+def test_static_local(t, symbols):
+    python = test_get_python(t, symbols, 'mt_slvi')
+    t.check(python == 4499)
+
+def test_static_thread(t, symbols):
+    python = test_get_python(t, symbols, 'mt_stvi')
+    t.check(python == 4500)
+
 def test(debug, tests):
     global debug_uut
     global tests_uut
@@ -279,10 +286,8 @@ def test(debug, tests):
     # c++03 compatible tests
     with Test(symbols, test_local_class) as t: t.test()
     with Test(symbols, test_global_class) as t: t.test()
-    with Test(symbols, test_class_ptr) as t: t.test()
-    with Test(symbols, test_class_ptr_loop) as t: t.test()
     with Test(symbols, test_global_vector) as t: t.test()
-    with Test(symbols, test_global_list_int) as t: t.test()
+    with Test(symbols, test_global_list) as t: t.test()
     with Test(symbols, test_global_string) as t: t.test()
     with Test(symbols, test_global_array) as t: t.test()
     with Test(symbols, test_global_union) as t: t.test()
@@ -292,6 +297,7 @@ def test(debug, tests):
     with Test(symbols, test_global_void_ptr) as t: t.test()
     with Test(symbols, test_global_deque) as t: t.test()
     with Test(symbols, test_global_map) as t: t.test()
+    with Test(symbols, test_static_local) as t: t.test()
 
     # c++11 compatible tests
     have_cpp11 = False
@@ -305,6 +311,7 @@ def test(debug, tests):
         with Test(symbols, test_global_shared_ptr) as t: t.test()
         with Test(symbols, test_mutex) as t: t.test()
         with Test(symbols, test_function) as t: t.test()
+        with Test(symbols, test_static_thread) as t: t.test()
 
     # test
     if False:

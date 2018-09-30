@@ -171,6 +171,10 @@ volatile bool mt_thread_finish;
 volatile bool mt_thread_in;
 mutex mt_thread_mutex;
 void mt_thread_func() {
+    // static
+    int mt_stvi = 4500;
+    noinline(mt_stvi);
+
     mt_thread_mutex.lock();
     MTclass mt_tc;
     mt_tc.charp = NULL;
@@ -245,6 +249,10 @@ int main(int argc, char** argv) {
         mt_gmii[k] = k * 2;
         mt_gsi.insert(k);
     }
+
+    // static
+    int mt_slvi = 4499;
+    noinline(mt_slvi);
 
 #ifdef CPP11
     have_cpp11 = true;
