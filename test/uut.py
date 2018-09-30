@@ -67,7 +67,7 @@ class Test:
             self._failed.append(self._assertions)
 
 def test_get_python(t, symbols, var_name):
-    syms = symbols.find_symbol(var_name)
+    syms = symbols.find_symbol_value_by_name(var_name)
     t.check(len(syms) == 1)
     # convert to python
     python = mt_to_python.MTpython().get(syms[0])

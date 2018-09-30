@@ -25,7 +25,8 @@ class MTsymbols:
     """
 
     def __init__(self, empty = False):
-        self.symbols = { } # { address: (symbol, value) }
+        self.symbols_by_name = { }        # { name: { address: (symbol, thread, frame, block) } }
+        self.symbols_by_addr = { }        # { address: { name: (symbol, thread, frame, block) } }
         if not empty: self._inferior()
 
     def dump(self):
@@ -60,15 +61,17 @@ class MTsymbols:
                 filtered[address] = (symbol, value)
         return symbols
 
-    def find_symbol(self, name):
-        """ return the list of (symbols, value) with specified name """
-        symbs = []
-        for v in self.symbols.values():
-            sname = v[0].name
-            # check for postfixes like [abi:cxx11]
-            if sname.startswith(name) and (len(sname) == len(name) or sname[len(name)] == '['):
-                symbs.append(v)
-        return symbs
+    def find_symbol_by_name(self, name):
+        """ return the dict { address: (symbol, thread, frame, block) } with specified name"""
+        return self.symbols_by_name.get(name, { })
+
+    def find_symbol_value_by_name(self, name):
+        """ return the list of [ (symbol, value) ] with specified name"""
+        symb_val = []
+        for v in self.find_symbol_by_name(name).values():
+            v[1].switch() # thread switch
+            symb_val.append((v[0], v[0].value(v[2])))
+        return symb_val
 
     def _inferior(self):
         # get inferior
@@ -96,30 +99,33 @@ class MTsymbols:
                 block = None
 
             # blocks
-            self._frame(block, frame)
+            self._frame(block, frame, thread)
 
             assert frame.is_valid()
             frame = frame.older()
 
-    def _frame(self, block, frame):
+    def _frame(self, block, frame, thread):
         while block and block.is_valid():
-            self._block(block, frame)
-            self._block(block.global_block, frame)
-            self._block(block.static_block, frame)
+            self._block(block, frame, thread)
             block = block.superblock
 
-    def _block(self, block, frame):
-        if block and block.is_valid():
-            for symbol in block:
-                if not symbol.is_function:
-                    self._symbol(symbol, frame)
+    def _block(self, block, frame, thread):
+        for symbol in block:
+            self._symbol(symbol, block, frame, thread)
 
-    def _symbol(self, symbol, frame):
-        if symbol.addr_class == gdb.SYMBOL_LOC_LABEL: return # or crash (these are the goto labels anyway)
-        try:
+    def _symbol(self, symbol, block, frame, thread):
+        # self.symbols = { name: { address: (symbol, thread, frame, block) } }
+        addr = 0
+        if symbol.addr_class not in [gdb.SYMBOL_LOC_TYPEDEF, gdb.SYMBOL_LOC_UNRESOLVED]:
             value = symbol.value(frame)
-            addr = int(value.address)
-            if addr and not value.is_optimized_out and value.type.code not in [gdb.TYPE_CODE_REF]:
-                self.symbols[addr] = (symbol, value)
-        except:
-            pass
+            if value.address != None and not value.is_optimized_out:
+                addr = int(value.address)
+        name = symbol.name
+        self.symbols_by_name.setdefault(name, { }).setdefault(addr, (symbol, thread, frame, block))
+        self.symbols_by_addr.setdefault(addr, { }).setdefault(name, (symbol, thread, frame, block))
+        sq_br = name.find('[')
+        if sq_br > 0:
+            # store also removing ABI info
+            name = name[: sq_br]
+            self.symbols_by_name.setdefault(name, { }).setdefault(addr, (symbol, thread, frame, block))
+            self.symbols_by_addr.setdefault(addr, { }).setdefault(name, (symbol, thread, frame, block))

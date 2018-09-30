@@ -242,7 +242,6 @@ class MTstd_map:
         rep_type = find_type(self.value.type, '_Rep_type')
         node = find_type(rep_type, '_Link_type')
         self.type = node.strip_typedefs()
-        print("------", str(self.type))
         return self
 
     def _get_value_from_Rb_tree_node(self, node):
