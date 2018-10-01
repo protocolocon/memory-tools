@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import sys, colors as c, mt_symbols, mt_to_python, mt_memory, mt_maps
+import sys, mt_colors as c, mt_symbols, mt_to_python, mt_memory, mt_maps
 
 # passed by through gdb_commands
 debug_uut = False

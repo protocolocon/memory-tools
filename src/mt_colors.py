@@ -27,3 +27,45 @@ RED_BOLD  = '\033[1;31m'
 BLUE_BOLD = '\033[1;34m'
 YELLOW    = '\033[1;33m'
 RESET     = '\033[0m'
+
+# optionally use colors
+class MTcolors:
+    def __init__(self):
+        self.use_colors = True
+
+    def use(self, argument, from_tty):
+        if not argument:
+            self.use_colors = not self.use_colors
+            if from_tty: print(self.cyan + 'colors: ' + self.green + (self.use_colors and 'ON' or 'OFF') + self.reset)
+        elif argument.lower() == 'on':
+            self.use_colors = True
+        elif argument.lower() == 'off':
+            self.use_colors = False
+        else:
+            print(self.red + 'error: ' + self.reset + 'unknown argument "' + argument + '"')
+
+    @property
+    def red(self): return self.use_colors and RED or ''
+    @property
+    def green(self): return self.use_colors and GREEN or ''
+    @property
+    def brown(self): return self.use_colors and BROWN or ''
+    @property
+    def blue(self): return self.use_colors and BLUE or ''
+    @property
+    def magenta(self): return self.use_colors and MAGENTA or ''
+    @property
+    def cyan(self): return self.use_colors and CYAN or ''
+    @property
+    def white(self): return self.use_colors and WHITE or ''
+    @property
+    def red_bold(self): return self.use_colors and RED_BOLD or ''
+    @property
+    def blue_bold(self): return self.use_colors and BLUE_BOLD or ''
+    @property
+    def yellow(self): return self.use_colors and YELLOW or ''
+    @property
+    def reset(self): return self.use_colors and RESET or ''
+
+
+mt_colors = MTcolors()

@@ -23,7 +23,7 @@ from mt_containers import (MTarray, MTstd_vector, MTstd_unordered_map, MTstd_uno
                            MTframe_lf_hashmap, MTframe_lf_vector, MTframe_lf_chunk,
                            MTframe_hashmap_close_addressing)
 
-codeToName = {
+mt_type_code_to_name = {
     gdb.TYPE_CODE_PTR:               'ptr',               #  1
     gdb.TYPE_CODE_ARRAY:             'array',             #  2
     gdb.TYPE_CODE_STRUCT:            'struct',            #  3
@@ -61,7 +61,7 @@ class MTvisitor:
 
     def visit(self, value, name):
         code = value.type.code
-        func_name = 'visit_' + codeToName.get(code, 'unhandled')
+        func_name = 'visit_' + mt_type_code_to_name.get(code, 'unhandled')
         if hasattr(self, func_name):
             getattr(self, func_name)(value, name)
         else:
@@ -82,7 +82,7 @@ class MTvisitor:
             gdb.TYPE_CODE_TYPEDEF:   self._typedef_visit,
         }
         def unhandled(value, name):
-            print('missing type code:', codeToName[value.type.code])
+            print('missing type code:', mt_type_code_to_name[value.type.code])
 
         visitors.get(value.type.code, unhandled)(value, name)
 

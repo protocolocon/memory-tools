@@ -16,13 +16,15 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, os, mt_colors as c
+import gdb, os
+from mt_colors import mt_colors as c
 
 class MTmaps:
     """ reads and parses /proc/$pid/maps file """
     def __init__(self):
-        inferior = gdb.selected_inferior()
         self.regions = [] # [ [low, high, description] ]
+        inferior = gdb.selected_inferior()
+        if not inferior.pid: return # no inferior yet
         with open('/proc/%d/maps' % inferior.pid) as f:
             while not f.closed:
                 line = f.readline()
@@ -35,6 +37,7 @@ class MTmaps:
         self.regions.sort()
 
         # find all stacks
+        selected = gdb.selected_thread()
         for thread in inferior.threads():
             thread.switch()
             assert thread.is_valid()
@@ -43,15 +46,18 @@ class MTmaps:
             region = self.get_region(frame.read_register('sp'))
             assert region
             region[2] = '[stack]'
+        selected.switch() # leave original thread selected
 
     def dump(self, regions = None):
-        print(c.WHITE + 'regions' + c.RESET)
+        print(c.white + 'regions' + c.reset)
         regions = regions or self.regions
-        for region in regions:
-            print((c.GREEN + '%16x %16x ' + c.YELLOW + '%10d ' + c.RESET + '%s') %
-                  (region[0], region[1], region[1] - region[0], region[2]))
-        print()
-
+        if not regions:
+            print(c.red + '<empty>' + c.reset)
+        else:
+            print((c.cyan + '%16s %16s %10s %s' + c.reset) % ('Start', 'End', 'Size', 'Description'))
+            for region in regions:
+                print((c.green + '%16x %16x ' + c.yellow + '%10d ' + c.reset + '%s') %
+                      (region[0], region[1], region[1] - region[0], region[2]))
 
     def get_region(self, address):
         for region in self.regions:
