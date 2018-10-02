@@ -155,11 +155,15 @@ class MTmaps(MTbase):
 
 
 class MTcolors(MTbase):
-    """De/activate usage of console colors (escape sequences)
+    """De/activate and configure usage of console colors (escape sequences)
     Without arguments, it switches colors on and off.
-    Explicitly set on / off to enable or disable colors.
+    Use 'on' and 'off' to explicitly enable or dissable colors.
+    Use 'list' to display current configuration of colors.
+    Use <color name> 'sequence' to configure a color.
     Example:
       mt colors off
+      mt colors list
+      mt colors cyan \\033[35m
     """
     def __init__(self):
         gdb.Command.__init__(self, 'mt colors', gdb.COMMAND_DATA, prefix = False)

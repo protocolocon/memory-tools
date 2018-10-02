@@ -16,22 +16,21 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-RED       = '\033[31m'
-GREEN     = '\033[32m'
-BROWN     = '\033[33m'
-BLUE      = '\033[34m'
-MAGENTA   = '\033[35m'
-CYAN      = '\033[36m'
-WHITE     = '\033[37m'
-RED_BOLD  = '\033[1;31m'
-BLUE_BOLD = '\033[1;34m'
-YELLOW    = '\033[1;33m'
-RESET     = '\033[0m'
-
-# optionally use colors
 class MTcolors:
+    'Optionally use colors'
     def __init__(self):
         self.use_colors = True
+        self._color_RED       = '\033[31m'
+        self._color_GREEN     = '\033[32m'
+        self._color_BROWN     = '\033[33m'
+        self._color_BLUE      = '\033[34m'
+        self._color_MAGENTA   = '\033[35m'
+        self._color_CYAN      = '\033[36m'
+        self._color_WHITE     = '\033[37m'
+        self._color_RED_BOLD  = '\033[1;31m'
+        self._color_BLUE_BOLD = '\033[1;34m'
+        self._color_YELLOW    = '\033[1;33m'
+        self.RESET            = '\033[0m'
 
     def use(self, argument, from_tty):
         if not argument:
@@ -41,31 +40,47 @@ class MTcolors:
             self.use_colors = True
         elif argument.lower() == 'off':
             self.use_colors = False
+        elif argument.lower() == 'list':
+            print(self.white + 'colors' + self.reset)
+            for attr in [x for x in dir(self) if x.startswith('_color_')]:
+                print('  this color is: ' + getattr(self, attr) + attr[7:] + ' ' +
+                      attr[7:].lower() + ' ' + self.RESET + attr[7:].lower())
         else:
-            print(self.red + 'error: ' + self.reset + 'unknown argument "' + argument + '"')
+            colors = { x[7:].lower(): x for x in dir(self) if x.startswith('_color_') }
+            args = argument.split()
+            args[0] = args[0].lower()
+            if len(args) == 2 and args[0] in colors.keys():
+                # configure color
+                args[1] = bytes(args[1], 'utf8').decode('unicode_escape')
+                if from_tty:
+                    print('setting ' + args[0] + ' from ' + getattr(self, colors[args[0]]) + args[0] + self.RESET +
+                          ' to ' + args[1] + args[0] + self.RESET)
+                setattr(self, colors[args[0]], args[1])
+            else:
+                print(self.red + 'error: ' + self.reset + 'unknown argument "' + argument + '"')
 
     @property
-    def red(self): return self.use_colors and RED or ''
+    def red(self): return self.use_colors and self._color_RED or ''
     @property
-    def green(self): return self.use_colors and GREEN or ''
+    def green(self): return self.use_colors and self._color_GREEN or ''
     @property
-    def brown(self): return self.use_colors and BROWN or ''
+    def brown(self): return self.use_colors and self._color_BROWN or ''
     @property
-    def blue(self): return self.use_colors and BLUE or ''
+    def blue(self): return self.use_colors and self._color_BLUE or ''
     @property
-    def magenta(self): return self.use_colors and MAGENTA or ''
+    def magenta(self): return self.use_colors and self._color_MAGENTA or ''
     @property
-    def cyan(self): return self.use_colors and CYAN or ''
+    def cyan(self): return self.use_colors and self._color_CYAN or ''
     @property
-    def white(self): return self.use_colors and WHITE or ''
+    def white(self): return self.use_colors and self._color_WHITE or ''
     @property
-    def red_bold(self): return self.use_colors and RED_BOLD or ''
+    def red_bold(self): return self.use_colors and self._color_RED_BOLD or ''
     @property
-    def blue_bold(self): return self.use_colors and BLUE_BOLD or ''
+    def blue_bold(self): return self.use_colors and self._color_BLUE_BOLD or ''
     @property
-    def yellow(self): return self.use_colors and YELLOW or ''
+    def yellow(self): return self.use_colors and self._color_YELLOW or ''
     @property
-    def reset(self): return self.use_colors and RESET or ''
+    def reset(self): return self.use_colors and self.RESET or ''
 
 
 mt_colors = MTcolors()
