@@ -132,7 +132,7 @@ class MTsymbols:
             print(c.red + '<empty>' + c.reset)
 
     @mt_util.maintain_thread_frame
-    def dump_value(self, tuple_sym):
+    def dump_value(self, tuple_sym, maps = None):
         addr, name, (symbol, thread, frame, block) = tuple_sym
         thread.switch()
         params = [ ('name',           c.cyan + name + c.reset),
@@ -165,7 +165,7 @@ class MTsymbols:
                 ('  source',          frame.find_sal().symtab.filename + ':' + str(frame.find_sal().line)),
             ]
         # memory mapping
-        maps = mt_maps.MTmaps()
+        maps = maps and maps or mt_maps.MTmaps()
         reg = maps.get_region(addr)
         if reg:
             params += [

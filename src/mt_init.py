@@ -16,12 +16,33 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, sys, mt_maps, mt_symbols, mt_util
+import gdb, sys, mt_maps, mt_symbols
 from mt_colors import mt_colors as c
 
+
+# context
+class MTcontext:
+    def __init__(self):
+        self.invalidate()
+
+    def invalidate(self):
+        self.maps = None
+        self.symbols = None
+
+    def get_maps(self):
+        if self.maps: return self.maps
+        self.maps = mt_maps.MTmaps()
+        return self.maps
+
+    def get_symbols(self):
+        if self.symbols: return self.symbols
+        self.symbols = mt_symbols.MTsymbols()
+        return self.symbols
+
+mt_context = MTcontext()
 mt_debug = False
 
-def show_exception(func):
+def mt_show_exception(func):
     def wrap(self, args, from_tty):
         try:
             return func(self, args, from_tty)
@@ -49,14 +70,14 @@ class MT(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt', gdb.COMMAND_DATA, prefix = True)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
         print(c.white + 'memory-tools' + c.reset)
         inferior = gdb.selected_inferior()
         if inferior and inferior.is_valid() and inferior.pid:
-            maps = mt_maps.MTmaps()
+            maps = mt_context.get_maps()
+            syms = mt_context.get_symbols()
             print(c.cyan + '  maps: ' + c.reset + str(len(maps.regions)))
-            syms = mt_symbols.MTsymbols()
             print(c.cyan + '  symbols: ' + c.reset + str(len(syms.filter())))
         else:
             print(c.red + '  error: ' + c.reset + 'inferior not valid (start program, open core or attach to running)')
@@ -82,9 +103,9 @@ class MTsymbols(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt symbols', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
-        syms = mt_symbols.MTsymbols()
+        syms = mt_context.get_symbols()
         if not argument:
             syms.dump_stats()
         else:
@@ -106,9 +127,9 @@ class MTvalue(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt value', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
-        syms = mt_symbols.MTsymbols()
+        syms = mt_context.get_symbols()
         locs, addrs, names, ranges = syms.filter_arguments_from_string(argument)
         tuples = syms.filter(locs, addrs, names, ranges)
         if not tuples:
@@ -117,7 +138,7 @@ class MTvalue(MTbase):
             if len(tuples) > 1:
                 print(c.brown + 'warning: ' + c.reset +
                       'several (' + str(len(tuples)) + ') matching symbols, dumping first')
-            syms.dump_value(tuples[0])
+            syms.dump_value(tuples[0], mt_context.get_maps())
 
 
 class MTmaps(MTbase):
@@ -132,9 +153,9 @@ class MTmaps(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt maps', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
-        maps = mt_maps.MTmaps()
+        maps = mt_context.get_maps()
         if not argument:
             maps.dump()
         else:
@@ -159,7 +180,7 @@ class MTcolors(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt colors', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
         c.use(argument, from_tty)
 
@@ -174,7 +195,7 @@ class MTdebug(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt debug', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
         global mt_debug
         if not argument:
@@ -193,10 +214,20 @@ class MTtest(MTbase):
     def __init__(self):
         gdb.Command.__init__(self, 'mt test', gdb.COMMAND_DATA, prefix = False)
 
-    @show_exception
+    @mt_show_exception
     def invoke(self, argument, from_tty):
         pass
 
+
+# register event handler to invalidate context
+# every time inferior runs, context gets invalidated
+# so that symbols, maps, etc, are recomputed on demand
+# otherwise, multiple commands benefit from cached results
+def mt_invalidation_handler(event): mt_context.invalidate()
+gdb.events.cont.connect(mt_invalidation_handler)
+
+
+# register commands
 mt_commands = {
     'mt':          MT(),
     'mt_symbols':  MTsymbols(),
