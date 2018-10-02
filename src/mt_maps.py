@@ -16,11 +16,12 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, os
+import gdb, os, mt_util
 from mt_colors import mt_colors as c
 
 class MTmaps:
     """ reads and parses /proc/$pid/maps file """
+    @mt_util.maintain_thread_frame
     def __init__(self):
         self.regions = [] # [ [low, high, description] ]
         inferior = gdb.selected_inferior()
@@ -37,7 +38,6 @@ class MTmaps:
         self.regions.sort()
 
         # find all stacks
-        selected = gdb.selected_thread()
         for thread in inferior.threads():
             thread.switch()
             assert thread.is_valid()
@@ -46,7 +46,6 @@ class MTmaps:
             region = self.get_region(frame.read_register('sp'))
             assert region
             region[2] = '[stack]'
-        selected.switch() # leave original thread selected
 
     def dump(self, regions = None):
         print(c.white + 'regions' + c.reset)

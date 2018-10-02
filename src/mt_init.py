@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, sys, mt_maps, mt_symbols
+import gdb, sys, mt_maps, mt_symbols, mt_util
 from mt_colors import mt_colors as c
 
 mt_debug = False
@@ -87,15 +87,6 @@ class MTsymbols(MTbase):
         syms = mt_symbols.MTsymbols()
         if not argument:
             syms.dump_stats()
-        elif argument == '*':
-            locs = { gdb.SYMBOL_LOC_UNDEF, gdb.SYMBOL_LOC_STATIC,
-                     gdb.SYMBOL_LOC_REGISTER, gdb.SYMBOL_LOC_ARG,
-                     gdb.SYMBOL_LOC_REF_ARG, gdb.SYMBOL_LOC_REGPARM_ADDR,
-                     gdb.SYMBOL_LOC_LOCAL, gdb.SYMBOL_LOC_OPTIMIZED_OUT,
-                     gdb.SYMBOL_LOC_COMPUTED }
-            syms.dump_tuples(syms.filter(locs))
-        elif argument == '**':
-            syms.dump_tuples(syms.filter())
         else:
             locs, addrs, names, ranges = syms.filter_arguments_from_string(argument)
             syms.dump_tuples(syms.filter(locs, addrs, names, ranges))
@@ -197,6 +188,15 @@ class MTdebug(MTbase):
             print(c.red + 'error: ' + c.reset + 'unknown argument "' + argument + '"')
 
 
+class MTtest(MTbase):
+    """Internal testing"""
+    def __init__(self):
+        gdb.Command.__init__(self, 'mt test', gdb.COMMAND_DATA, prefix = False)
+
+    @show_exception
+    def invoke(self, argument, from_tty):
+        pass
+
 mt_commands = {
     'mt':          MT(),
     'mt_symbols':  MTsymbols(),
@@ -204,4 +204,5 @@ mt_commands = {
     'mt_maps':     MTmaps(),
     'mt_colors':   MTcolors(),
     'mt_debug':    MTdebug(),
+    #'mt_test':     MTtest(),
 }

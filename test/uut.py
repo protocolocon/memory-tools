@@ -16,7 +16,8 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import sys, mt_colors as c, mt_symbols, mt_to_python, mt_memory, mt_maps
+import sys, mt_symbols, mt_to_python, mt_memory, mt_maps
+from mt_colors import mt_colors as c
 
 # passed by through gdb_commands
 debug_uut = False
@@ -46,13 +47,13 @@ class Test:
         if not self.run: return True
 
         if isinstance(value, Exception):
-            cout(c.RED + 'e')
+            cout(c.red + 'e')
         elif self._errors:
-            cout(c.RED + 't')
+            cout(c.red + 't')
         elif not self._assertions:
-            cout(c.BROWN + '!')
+            cout(c.brown + '!')
         else:
-            cout(c.GREEN + '.')
+            cout(c.green + '.')
         if debug_uut: # stop in gdb promp for debugging in case of error
             if self._errors:
                 print('number of assertions:', self._assertions, 'number of errors:', self._errors, self._failed)

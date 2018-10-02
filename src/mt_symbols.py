@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, os, re, mt_maps
+import gdb, os, re, mt_maps, mt_util
 from mt_type_cleaning import clean_type
 from mt_colors import mt_colors as c
 
@@ -48,10 +48,8 @@ mt_frame_type_to_name = {
 }
 
 class MTsymbols:
-    """
-    Find all symbols accessible from the blocks of all frames of all threads.
-    """
-
+    'Find all symbols accessible from the blocks of all frames of all threads'
+    @mt_util.maintain_thread_frame
     def __init__(self, empty = False):
         self.symbols_by_name = { }        # { name: { address: (symbol, thread, frame, block) } }
         self.symbols_by_addr = { }        # { address: { name: (symbol, thread, frame, block) } }
@@ -63,20 +61,29 @@ class MTsymbols:
         addrs = set()
         names = [ ]
         ranges = [ ]
-        name_to_loc = { v: k for k, v in mt_symbol_loc_to_name.items() }
-        for arg in argument.split():
-            if arg in name_to_loc.keys():
-                locs.add(name_to_loc[arg])
-            else:
-                try:
-                    if '-' in arg: # range
-                        a = [int(x, base = 0) for x in arg.split('-')]
-                        ranges.append((a[0], a[1]))
-                    else: # address
-                        addr = int(arg, base = 0)
-                        addrs.add(addr)
-                except ValueError:
-                    names.append(arg)
+        if argument == '*':
+            locs = { gdb.SYMBOL_LOC_UNDEF, gdb.SYMBOL_LOC_STATIC,
+                     gdb.SYMBOL_LOC_REGISTER, gdb.SYMBOL_LOC_ARG,
+                     gdb.SYMBOL_LOC_REF_ARG, gdb.SYMBOL_LOC_REGPARM_ADDR,
+                     gdb.SYMBOL_LOC_LOCAL, gdb.SYMBOL_LOC_OPTIMIZED_OUT,
+                     gdb.SYMBOL_LOC_COMPUTED }
+        elif argument == '**':
+            pass
+        else:
+            name_to_loc = { v: k for k, v in mt_symbol_loc_to_name.items() }
+            for arg in argument.split():
+                if arg in name_to_loc.keys():
+                    locs.add(name_to_loc[arg])
+                else:
+                    try:
+                        if '-' in arg: # range
+                            a = [int(x, base = 0) for x in arg.split('-')]
+                            ranges.append((a[0], a[1]))
+                        else: # address
+                            addr = int(arg, base = 0)
+                            addrs.add(addr)
+                    except ValueError:
+                        names.append(arg)
         return locs, addrs, names, ranges
 
     def filter(self, locs = set(), addresses = set(), names = [ ], ranges = [ ]):
@@ -121,10 +128,13 @@ class MTsymbols:
                   (address, symbol.type.sizeof,
                    p(symbol.is_argument, 'A'), p(symbol.is_constant, 'C'), p(symbol.is_variable, 'V'),
                    cut(name, 40), mt_symbol_loc_to_name[symbol.addr_class], clean_type(symbol.type)))
+        if not tuple_syms:
+            print(c.red + '<empty>' + c.reset)
 
+    @mt_util.maintain_thread_frame
     def dump_value(self, tuple_sym):
         addr, name, (symbol, thread, frame, block) = tuple_sym
-        thread.switch() # leave thread selected
+        thread.switch()
         params = [ ('name',           c.cyan + name + c.reset),
                    ('linkage',        symbol.linkage_name),
                    ('address',        hex(addr)),
@@ -147,15 +157,8 @@ class MTsymbols:
         ]
         # frame
         if symbol.needs_frame:
-            frame.select()
-            frame_num = -1
-            f = frame
-            while f and f.is_valid():
-                f = f.newer()
-                frame_num += 1
-            frame.select() # leave frame selected
             params += [
-                ('frame',             c.cyan + str(frame_num) + c.reset),
+                ('frame',             c.cyan + str(mt_util.get_frame_number(thread, frame)) + c.reset),
                 ('  name',            str(frame.name())),
                 ('  type',            mt_frame_type_to_name[frame.type()]),
                 ('  pc',              hex(frame.pc())),
@@ -172,8 +175,8 @@ class MTsymbols:
                 ('  descr',           reg[2]),
             ]
         # value
-        if symbol.addr_class not in { gdb.SYMBOL_LOC_TYPEDEF, gdb.SYMBOL_LOC_UNRESOLVED, gdb.SYMBOL_LOC_LABEL }:
-            value = symbol.value(frame)
+        value = mt_util.get_value(symbol, frame)
+        if value:
             params += [ ('value', c.cyan + str(value) + c.reset) ]
 
         # dump finally everything
