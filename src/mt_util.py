@@ -50,3 +50,19 @@ def maintain_thread_frame(func):
         restore_thread_frame(prev_thread, prev_frame)
         return ret
     return wrap
+
+def find_frames_by_function_addr(addr):
+    thread_frames = []
+    inferior = gdb.selected_inferior()
+    if inferior and inferior.is_valid() and inferior.pid:
+        for thread in inferior.threads():
+            thread.switch()
+            frame = gdb.newest_frame()
+            while frame:
+                frame_sym = frame.function()
+                if frame_sym:
+                    frame_addr = frame_sym.value().address
+                    if frame_addr == addr:
+                        thread_frames.append((thread, frame))
+                frame = frame.older()
+    return thread_frames

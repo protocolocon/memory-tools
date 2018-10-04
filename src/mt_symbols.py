@@ -138,6 +138,7 @@ class MTsymbols:
         params = [ ('name',           c.cyan + name + c.reset),
                    ('linkage',        symbol.linkage_name),
                    ('address',        hex(addr)),
+                   ('size',           str(symbol.type.sizeof)),
                    ('type',           str(symbol.type)),
                    ('source',         symbol.symtab.filename + ':' + str(symbol.line)),
                    ('obj',            (symbol.symtab.objfile.owner and
@@ -149,15 +150,15 @@ class MTsymbols:
                                        (symbol.is_constant and 'constant ' or '') +
                                        (symbol.is_function and 'function ' or '') +
                                        (symbol.is_variable and 'variable ' or ''))),
-                   ('thread',         c.cyan + str(thread.num) + c.reset),
-                   ('  name',         thread.name),
-                   ('  pid',          str(thread.ptid[0])),
-                   ('  lwpid',        str(thread.ptid[1])),
-                   ('  tid',          str(thread.ptid[2])),
         ]
         # frame
         if symbol.needs_frame:
             params += [
+                ('thread',            c.cyan + str(thread.num) + c.reset),
+                ('  name',            thread.name),
+                ('  pid',             str(thread.ptid[0])),
+                ('  lwpid',           str(thread.ptid[1])),
+                ('  tid',             str(thread.ptid[2])),
                 ('frame',             c.cyan + str(mt_util.get_frame_number(thread, frame)) + c.reset),
                 ('  name',            str(frame.name())),
                 ('  type',            mt_frame_type_to_name[frame.type()]),
@@ -192,6 +193,29 @@ class MTsymbols:
                 d[tup[0].addr_class] = d.get(tup[0].addr_class, 0) + 1
         for loc, number in d.items():
             print((c.cyan + '  %-17s' + c.yellow + '%7d' + c.reset) % (mt_symbol_loc_to_name[loc], number))
+
+    def switch_to_value(self, tuple_sym):
+        addr, name, (symbol, thread, frame, block) = tuple_sym
+        if symbol.needs_frame:
+            pass
+        elif symbol.addr_class == gdb.SYMBOL_LOC_BLOCK:
+            addr = symbol.value().address
+            thread_frames = mt_util.find_frames_by_function_addr(addr)
+            if not thread_frames:
+                print(c.red + 'error: ' + c.reset + 'function not being executed in any frame')
+                return
+            if len(thread_frames) > 1:
+                print(c.brown + 'warning: ' + c.reset + 'function in more than one thread / frame')
+            thread, frame = thread_frames[0]
+        else:
+            print(c.red + 'error: ' + c.reset + 'symbol not in a frame')
+            return
+        # found thread and frame
+        thread.switch()
+        print(c.white + 'switching: ' + c.reset + 'thread ' + c.cyan + str(thread.num) +
+              c.reset + ' frame ' + c.cyan + str(mt_util.get_frame_number(thread, frame)) + c.reset +
+              ' (' + name + ')')
+        frame.select()
 
     def filter_by_regions(self, regions):
         """ regions as in MTmaps regions """
@@ -245,7 +269,11 @@ class MTsymbols:
     def _thread(self, thread):
         thread.switch()
         assert thread.is_valid()
+
+        # visit frames from oldest to newest to avoid problems with artificial frames (inlined):
+        #   variables in upper frame appear also in artificial one
         frame = gdb.newest_frame()
+        while frame.older(): frame = frame.older()
         while frame:
             try:
                 block = frame.block()
@@ -256,7 +284,7 @@ class MTsymbols:
             self._frame(block, frame, thread)
 
             assert frame.is_valid()
-            frame = frame.older()
+            frame = frame.newer()
 
     def _frame(self, block, frame, thread):
         while block and block.is_valid():
@@ -280,12 +308,13 @@ class MTsymbols:
             value = symbol.value(frame)
             if value.address != None and not value.is_optimized_out:
                 addr = int(value.address)
+        sym_tuple = (symbol, thread, frame, block)
         name = symbol.name
-        self.symbols_by_name.setdefault(name, { }).setdefault(addr, (symbol, thread, frame, block))
-        self.symbols_by_addr.setdefault(addr, { }).setdefault(name, (symbol, thread, frame, block))
+        self.symbols_by_name.setdefault(name, { }).setdefault(addr, sym_tuple)
+        self.symbols_by_addr.setdefault(addr, { }).setdefault(name, sym_tuple)
         sq_br = name.find('[')
         if sq_br > 0:
             # store also removing ABI info
             name = name[: sq_br]
-            self.symbols_by_name.setdefault(name, { }).setdefault(addr, (symbol, thread, frame, block))
-            self.symbols_by_addr.setdefault(addr, { }).setdefault(name, (symbol, thread, frame, block))
+            self.symbols_by_name.setdefault(name, { }).setdefault(addr, sym_tuple)
+            self.symbols_by_addr.setdefault(addr, { }).setdefault(name, sym_tuple)

@@ -141,6 +141,34 @@ class MTvalue(MTbase):
             syms.dump_value(tuples[0], mt_context.get_maps())
 
 
+class MTswitch(MTbase):
+    """Switch to thread and frame of symbol
+    Arguments can be addresses, ranges, name regexes and/or location types.
+    When one or more of these argument types are used, first symbol matching
+      one of each type will be selected.
+    Ranges are of the form: addr0-addr1.
+    Examples:
+      mt switch variable_name # name regex
+      mt switch ^var[123]     # name regex
+      mt switch 0x804acb0-0x8064468 loc_static # first static variable in range
+    """
+    def __init__(self):
+        gdb.Command.__init__(self, 'mt switch', gdb.COMMAND_DATA, prefix = False)
+
+    @mt_show_exception
+    def invoke(self, argument, from_tty):
+        syms = mt_context.get_symbols()
+        locs, addrs, names, ranges = syms.filter_arguments_from_string(argument)
+        tuples = syms.filter(locs, addrs, names, ranges)
+        if not tuples:
+            print(c.red + 'error: ' + c.reset + 'no matching symbol')
+        else:
+            if len(tuples) > 1:
+                print(c.brown + 'warning: ' + c.reset + 'several (' + str(len(tuples)) +
+                      ') matching symbols, switching to first: ' +c.cyan + tuples[0][1])
+            syms.switch_to_value(tuples[0])
+
+
 class MTmaps(MTbase):
     """Dump memory mappings (inferring all heaps and stacks)
     With no arguments print all inferior memory mappings: /proc/<pid>/maps.
@@ -232,6 +260,7 @@ mt_commands = {
     'mt':          MT(),
     'mt_symbols':  MTsymbols(),
     'mt_value':    MTvalue(),
+    'mt_switch':   MTswitch(),
     'mt_maps':     MTmaps(),
     'mt_colors':   MTcolors(),
     'mt_debug':    MTdebug(),
