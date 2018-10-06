@@ -171,9 +171,9 @@ class MTsymbols:
         if reg:
             params += [
                 ('map',               ''),
-                ('  low',             hex(reg[0])),
-                ('  high',            hex(reg[1])),
-                ('  descr',           reg[2]),
+                ('  low',             hex(reg.low)),
+                ('  high',            hex(reg.high)),
+                ('  descr',           reg.build_description()),
             ]
         # value
         value = mt_util.get_value(symbol, frame)
