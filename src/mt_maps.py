@@ -109,12 +109,13 @@ mt_elf_sections = {
 class MTmaps:
     """ reads and parses /proc/$pid/maps file """
     class Region:
-        def __init__(self, low, high, map_type, file_mmap, permission):
+        def __init__(self, low, high, map_type, file_mmap, permission, extra):
             self.low = low
             self.high = high
             self.map_type = map_type
             self.file_mmap = file_mmap
             self.permission = permission
+            self.extra = extra
 
         def __lt__(self, region):
             return self.low < region.low
@@ -131,6 +132,8 @@ class MTmaps:
             if desc: desc = '[' + desc.strip() + ']'
             if self.file_mmap:
                 desc += (desc and ' ' or '') + c.cyan + os.path.basename(self.file_mmap) + ' ' + c.blue + os.path.dirname(self.file_mmap) + c.reset
+            if self.extra:
+                desc += (desc and ' ' or '') + c.red + self.extra + c.reset
             return desc
 
     @mt_util.maintain_thread_frame
@@ -153,7 +156,7 @@ class MTmaps:
                     assert line[5].endswith(']'), 'parsing'
                     if line[5] in mt_map_codenames.keys():
                         map_type |= mt_map_codenames[line[5]]
-                self.regions.append(MTmaps.Region(low, high, map_type, file_mmap, permission))
+                self.regions.append(MTmaps.Region(low, high, map_type, file_mmap, permission, ''))
         self.regions.sort()
 
         # find all stacks
@@ -165,6 +168,7 @@ class MTmaps:
             region = self.get_region(frame.read_register('sp'))
             assert region
             region.map_type |= mt_map_codenames['[stack]']
+            region.extra = 'thread ' + str(thread.num)
 
         # refine elf file mappings using gdb
         files = gdb.execute('info files', to_string = True)
