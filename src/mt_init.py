@@ -190,7 +190,8 @@ class MTmaps(MTbase):
         else:
             try:
                 addr = int(argument, base = 0)
-                maps.dump([maps.get_region(addr)])
+                region = maps.get_region(addr)
+                maps.dump(region and [region] or [])
             except ValueError:
                 maps.dump(maps.get_regions(argument.split()))
 
@@ -259,11 +260,11 @@ gdb.events.cont.connect(mt_invalidation_handler)
 # register commands
 mt_commands = {
     'mt':          MT(),
-    'mt_symbols':  MTsymbols(),
-    'mt_value':    MTvalue(),
-    'mt_switch':   MTswitch(),
-    'mt_maps':     MTmaps(),
-    'mt_colors':   MTcolors(),
-    'mt_debug':    MTdebug(),
-    #'mt_test':     MTtest(),
+    'mt symbols':  MTsymbols(),
+    'mt value':    MTvalue(),
+    'mt switch':   MTswitch(),
+    'mt maps':     MTmaps(),
+    'mt colors':   MTcolors(),
+    'mt debug':    MTdebug(),
+    #'mt test':     MTtest(),
 }

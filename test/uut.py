@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import sys, mt_symbols, mt_to_python, mt_memory, mt_maps
+import sys, mt_symbols, mt_to_python, mt_memory, mt_maps, mt_init
 from mt_colors import mt_colors as c
 
 # passed by through gdb_commands
@@ -313,6 +313,32 @@ def test(debug, tests):
         with Test(symbols, test_mutex) as t: t.test()
         with Test(symbols, test_function) as t: t.test()
         with Test(symbols, test_static_thread) as t: t.test()
+
+    # execute commands w/o arguments
+    commands = [
+        ('mt', ''),
+        ('mt maps', ''),
+        ('mt maps', '0x7ffffffde000'),
+        ('mt maps', '[data] [bss]'),
+        ('mt symbols', ''),
+        ('mt symbols', 'mt_'),
+        ('mt symbols', '*'),
+        ('mt symbols', 'loc_static'),
+        ('mt value', 'mt_gvi'),
+        ('mt value', 'main'),
+        ('mt switch', 'main\('),
+        ('mt switch', 'mt_slvi'),
+        ('mt switch', 'mt_lstr'),
+        ('mt debug', 'on'),
+        ('mt debug', ''),
+        ('mt colors', 'off'),
+        ('mt colors', ''),
+        ('mt colors', 'cyan \\033[35m'),
+        ('mt colors', 'list'),
+    ]
+    for command, argument in commands:
+        mt_init.mt_commands[command].invoke(argument, True)
+
 
     # test
     if False:

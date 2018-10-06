@@ -55,8 +55,8 @@ namespace {
         cout << "ready";
         cout.flush();
         close(STDOUT_FILENO);
-        string str;
-        cin >> str;
+        string mt_lstr;
+        cin >> mt_lstr;
     }
 
     class MTclass {
