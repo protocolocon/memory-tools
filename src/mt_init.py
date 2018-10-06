@@ -177,6 +177,7 @@ class MTmaps(MTbase):
     Examples:
       mt maps 0x7ffffffde000
       mt maps libc-2.27.so libpthread-2.27.so [heap] [stack]
+      mt maps [data] [bss]
     """
     def __init__(self):
         gdb.Command.__init__(self, 'mt maps', gdb.COMMAND_DATA, prefix = False)
