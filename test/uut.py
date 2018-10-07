@@ -314,7 +314,7 @@ def test(debug, tests):
         with Test(symbols, test_function) as t: t.test()
         with Test(symbols, test_static_thread) as t: t.test()
 
-    # execute commands w/o arguments
+    # execute commands w/o checking output
     commands = [
         ('mt', ''),
         ('mt maps', ''),

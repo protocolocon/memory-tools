@@ -16,7 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with memory-tools. If not, see <http://www.gnu.org/licenses/>.
 
-import gdb, sys, mt_maps, mt_symbols
+import gdb, sys, mt_maps, mt_symbols, mt_object
 from mt_colors import mt_colors as c
 
 
@@ -196,6 +196,21 @@ class MTmaps(MTbase):
                 maps.dump(maps.get_regions(argument.split()))
 
 
+class MTobjects(MTbase):
+    """Show inferiors objects and debugging symbols hierarchy
+    With no arguments print objects hierarchy and statistics.
+    Examples:
+      mt objects
+    """
+    def __init__(self):
+        gdb.Command.__init__(self, 'mt objects', gdb.COMMAND_DATA, prefix = False)
+
+    @mt_show_exception
+    def invoke(self, argument, from_tty):
+        objs = mt_object.MTobjects()
+        objs.dump()
+
+
 class MTcolors(MTbase):
     """De/activate and configure usage of console colors (escape sequences)
     Without arguments, it switches colors on and off.
@@ -264,6 +279,7 @@ mt_commands = {
     'mt value':    MTvalue(),
     'mt switch':   MTswitch(),
     'mt maps':     MTmaps(),
+    'mt objects':  MTobjects(),
     'mt colors':   MTcolors(),
     'mt debug':    MTdebug(),
     #'mt test':     MTtest(),
