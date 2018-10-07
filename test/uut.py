@@ -329,6 +329,7 @@ def test(debug, tests):
         ('mt switch', 'main\('),
         ('mt switch', 'mt_slvi'),
         ('mt switch', 'mt_lstr'),
+        ('mt objects', ''),
         ('mt debug', 'on'),
         ('mt debug', ''),
         ('mt colors', 'off'),
